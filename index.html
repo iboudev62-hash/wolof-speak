@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b7a4b">
+<title>Wolof Chat</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1c2420;--mut:#6b756f;--acc:#0b7a4b;--bd:#e2ded4;--mine:#0b7a4b;--mineink:#fff;--err:#b3261e}
+@media(prefers-color-scheme:dark){:root{--bg:#121714;--card:#1c231f;--ink:#e8ede9;--mut:#93a09a;--acc:#35c488;--bd:#2b352f;--mine:#1f6b4a;--err:#ff8a80}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);padding-top:env(safe-area-inset-top)}
+[hidden]{display:none!important}
+button,input,select{font:inherit;color:inherit}
+#connexion{max-width:420px;margin:0 auto;padding:28px 20px}
+h1{font-size:1.6rem;margin:0 0 4px}
+.sous{color:var(--mut);margin:0 0 20px}
+label{display:block;font-size:.85rem;color:var(--mut);margin:14px 0 4px}
+input[type=text],input[type=password],select{width:100%;padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--card)}
+.cg{display:flex;gap:10px;align-items:flex-start;margin-top:16px;font-size:.85rem;color:var(--mut)}
+.cg input{margin-top:3px}
+.btn{width:100%;margin-top:20px;padding:14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.5}
+.err{color:var(--err);min-height:1.4em;margin-top:12px;font-size:.9rem}
+#chat{display:flex;flex-direction:column;height:100%;max-width:720px;margin:0 auto}
+header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bd);background:var(--card)}
+header b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+header select{width:auto;padding:6px 8px}
+.quit{border:1px solid var(--bd);background:none;border-radius:8px;padding:6px 10px;cursor:pointer}
+#fil{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.vide{margin:auto;color:var(--mut);text-align:center;padding:20px}
+.bulle{max-width:85%;align-self:flex-start;background:var(--card);border:1px solid var(--bd);border-radius:16px 16px 16px 4px;padding:10px 12px;overflow-wrap:anywhere}
+.bulle.moi{align-self:flex-end;background:var(--mine);color:var(--mineink);border-color:transparent;border-radius:16px 16px 4px 16px}
+.auteur{font-size:.75rem;opacity:.7;margin-bottom:2px}
+.texte{font-size:1.05rem}
+.orig{font-size:.85rem;opacity:.75;margin-top:6px;font-style:italic}
+.actions{display:flex;gap:8px;margin-top:8px}
+.actions button{border:0;background:rgba(127,127,127,.18);color:inherit;border-radius:8px;padding:4px 10px;font-size:.8rem;cursor:pointer}
+footer{padding:10px 14px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--bd);background:var(--card);text-align:center}
+#statut{min-height:1.3em;font-size:.85rem;color:var(--mut);margin-bottom:6px}
+#micro{width:72px;height:72px;border-radius:50%;border:0;background:var(--acc);color:#fff;font-size:1.8rem;cursor:pointer}
+#micro.on{background:var(--err);animation:p 1s infinite}
+#micro:disabled{opacity:.5}
+@keyframes p{50%{box-shadow:0 0 0 12px rgba(179,38,30,.2)}}
+details{margin-top:22px;font-size:.85rem;color:var(--mut)}summary{cursor:pointer}details a{color:var(--acc)}details p{margin:8px 0}
+</style>
+</head>
+<body>
+
+<section id="connexion">
+  <h1>Wolof Chat</h1>
+  <p class="sous">Parlez en wolof, chacun lit et écoute dans sa langue.</p>
+  <label for="nom">Votre prénom</label>
+  <input id="nom" type="text" maxlength="30" autocomplete="given-name">
+  <label for="salon">Nom du salon de discussion</label>
+  <input id="salon" type="text" maxlength="30" placeholder="ex. famille">
+  <label for="serveur">Adresse du serveur (laisser vide = mode démo sans serveur)</label>
+  <input id="serveur" type="text" placeholder="ex. https://mon-serveur.com" autocapitalize="off">
+  <label for="code">Code d’accès (inutile en mode démo)</label>
+  <input id="code" type="password" autocomplete="current-password">
+  <label for="lang">Je souhaite lire les messages en</label>
+  <select id="lang">
+    <option value="fr">Français</option>
+    <option value="en">English</option>
+    <option value="es">Español</option>
+    <option value="wo">Wolof (original)</option>
+  </select>
+  <div class="cg">
+    <input id="consent" type="checkbox">
+    <label for="consent" style="margin:0">J’accepte que mes enregistrements soient conservés pour améliorer la traduction du wolof (facultatif).</label>
+  </div>
+  <button class="btn" id="entrer">Entrer dans le salon</button>
+  <div class="err" id="erreur" role="alert"></div>
+  <details><summary>Obtenir le serveur IA complet (vraie transcription du wolof)</summary>
+    <p>Ce fichier contient tout le projet. Téléchargez les fichiers ci-dessous dans un même dossier, enregistrez aussi cette page sous le nom <b>index.html</b> dans ce dossier, puis suivez le fichier README.</p>
+    <ul id="dl"></ul></details>
+</section>
+
+<section id="chat" hidden>
+  <header>
+    <b id="titre"></b>
+    <select id="lecture" aria-label="Langue de lecture">
+      <option value="fr">Français</option>
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="wo">Wolof</option>
+    </select>
+    <button class="quit" id="quitter">Quitter</button>
+  </header>
+  <div id="fil"><div class="vide" id="vide">Aucun message pour l’instant.<br>Touchez le micro et parlez en wolof.</div></div>
+  <footer>
+    <div id="statut"></div>
+    <button id="micro" aria-label="Enregistrer un message vocal">🎤</button>
+  </footer>
+</section>
+
+<script>
+const $ = s => document.querySelector(s);
+const VOIX = {fr: "fr-FR", en: "en-US", es: "es-ES"};
+let S = {}, ws = null, rec = null, flux = null, morceaux = [], minuteur = null;
+const msgs = new Map();
+
+const h = (tag, cls, txt) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (txt != null) e.textContent = txt;
+  return e;
+};
+const api = (chemin, opts = {}) => S.demo ? demoApi(chemin, opts) :
+  fetch(S.base + chemin, {...opts, headers: {...(opts.headers || {}), "X-Code": S.code}});
+const statut = t => { $("#statut").textContent = t; };
+const erreur = t => { $("#erreur").textContent = t; };
+
+try {
+  const p = JSON.parse(localStorage.getItem("wolofchat") || "{}");
+  $("#nom").value = p.nom || ""; $("#salon").value = p.salon || "";
+  if (p.lang) $("#lang").value = p.lang;
+} catch {}
+
+$("#entrer").onclick = async () => {
+  S = {
+    nom: $("#nom").value.trim(),
+    salon: $("#salon").value.trim().toLowerCase().replace(/\s+/g, "-"),
+    code: $("#code").value,
+    base: $("#serveur").value.trim().replace(/\/+$/, ""),
+    demo: !$("#serveur").value.trim(),
+    lang: $("#lang").value,
+    consent: $("#consent").checked,
+  };
+  if (!S.nom || !S.salon || (!S.demo && !S.code)) return erreur("Renseignez tous les champs.");
+  erreur(""); $("#entrer").disabled = true;
+  try {
+    const r = await api("/api/historique/" + encodeURIComponent(S.salon));
+    if (!r.ok) throw new Error(r.status === 401 ? "Code d’accès incorrect." : "Erreur du serveur.");
+    const historique = await r.json();
+    try { localStorage.setItem("wolofchat", JSON.stringify({nom: S.nom, salon: S.salon, lang: S.lang})); } catch {}
+    $("#connexion").hidden = true; $("#chat").hidden = false;
+    $("#titre").textContent = "# " + S.salon + " · " + S.nom;
+    $("#lecture").value = S.lang;
+    historique.forEach(rend);
+    S.actif = true; connecter();
+  } catch (e) {
+    erreur(e.message === "Failed to fetch" ? "Serveur injoignable." : e.message);
+  }
+  $("#entrer").disabled = false;
+};
+
+$("#quitter").onclick = () => {
+  S.actif = false; if (ws) ws.close(); msgs.clear();
+  $("#fil").querySelectorAll(".bulle").forEach(e => e.remove());
+  $("#vide").hidden = false;
+  $("#chat").hidden = true; $("#connexion").hidden = false;
+};
+
+$("#lecture").onchange = e => { S.lang = e.target.value; msgs.forEach(rend); };
+
+function connecter() {
+  if (S.demo) return demoCanal();
+  ws = new WebSocket(S.base.replace(/^http/, "ws") +
+    "/ws/" + encodeURIComponent(S.salon) + "?code=" + encodeURIComponent(S.code));
+  ws.onmessage = e => rend(JSON.parse(e.data));
+  ws.onclose = () => { if (S.actif) setTimeout(connecter, 2000); };
+}
+
+function rend(m) {
+  msgs.set(m.id, m);
+  $("#vide").hidden = true;
+  const fil = $("#fil");
+  let el = document.getElementById("m" + m.id);
+  const nouveau = !el;
+  if (nouveau) { el = document.createElement("article"); el.id = "m" + m.id; fil.append(el); }
+  el.className = "bulle" + (m.auteur === S.nom ? " moi" : "");
+  el.replaceChildren();
+  const heure = new Date(m.ts * 1000).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
+  el.append(h("div", "auteur", m.auteur + " · " + heure));
+  const principal = S.lang === "wo" ? m.wolof : (m.trad[S.lang] || "…");
+  el.append(h("div", "texte", principal));
+  if (S.lang !== "wo") el.append(h("div", "orig", "Wolof : " + m.wolof));
+  const actions = h("div", "actions");
+  if (S.lang !== "wo") {
+    const b = h("button", "", "🔊 Écouter");
+    b.onclick = () => {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(principal);
+      u.lang = VOIX[S.lang]; speechSynthesis.speak(u);
+    };
+    actions.append(b);
+  }
+  if (m.audio) {
+    const p = h("button", "", "▶ Voix");
+    p.onclick = () => new Audio(URL.createObjectURL(m.audio)).play();
+    actions.append(p);
+  }
+  const c = h("button", "", "✏️ Corriger");
+  c.onclick = async () => {
+    const t = prompt("Corrigez le texte wolof :", m.wolof);
+    if (!t || t.trim() === m.wolof) return;
+    statut("Mise à jour de la traduction…");
+    try {
+      const r = await api("/api/corriger", {method: "POST",
+        headers: {"Content-Type": "application/json"}, body: JSON.stringify({id: m.id, texte: t})});
+      if (r.ok) rend(await r.json()); else statut("Correction impossible.");
+    } catch { statut("Serveur injoignable."); }
+    statut("");
+  };
+  actions.append(c);
+  el.append(actions);
+  if (nouveau) fil.scrollTop = fil.scrollHeight;
+}
+
+$("#micro").onclick = async () => {
+  if (rec && rec.state === "recording") return rec.stop();
+  try { flux = await navigator.mediaDevices.getUserMedia({audio: true}); }
+  catch { return statut("Micro refusé : autorisez-le dans votre navigateur (HTTPS requis)."); }
+  const type = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm" : "audio/mp4";
+  rec = new MediaRecorder(flux, {mimeType: type});
+  morceaux = [];
+  rec.ondataavailable = e => morceaux.push(e.data);
+  rec.onstop = () => {
+    clearInterval(minuteur);
+    flux.getTracks().forEach(t => t.stop());
+    $("#micro").classList.remove("on");
+    envoyer(new Blob(morceaux, {type}), type);
+  };
+  rec.start();
+  $("#micro").classList.add("on");
+  let s = 0;
+  statut("Enregistrement… touchez pour envoyer");
+  minuteur = setInterval(() => {
+    s++; statut("Enregistrement… " + s + " s · touchez pour envoyer");
+    if (s >= 58) rec.stop();
+  }, 1000);
+};
+
+async function envoyer(blob, type) {
+  if (blob.size < 1500) return statut("Message trop court, réessayez.");
+  statut("Transcription et traduction en cours…");
+  $("#micro").disabled = true;
+  const f = new FormData();
+  f.append("audio", blob, "message." + (type.includes("webm") ? "webm" : "mp4"));
+  f.append("salon", S.salon); f.append("auteur", S.nom); f.append("consentement", S.consent);
+  try {
+    const r = await api("/api/vocal", {method: "POST", body: f});
+    if (r.ok) { rend(await r.json()); statut(""); }
+    else { const e = await r.json().catch(() => ({})); statut(e.detail || "Erreur du serveur."); }
+  } catch { statut("Serveur injoignable."); }
+  $("#micro").disabled = false;
+}
+
+/* ===== Mode démo (sans serveur) et téléchargement du serveur ===== */
+const norm = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+const DICO = [
+  ["Salaam aleekum", "Que la paix soit sur vous.", "Peace be upon you.", "Que la paz sea contigo."],
+  ["Maalekum salaam", "Et sur vous la paix.", "And peace be upon you.", "Y contigo la paz."],
+  ["Nanga def", "Comment vas-tu ?", "How are you?", "¿Cómo estás?"],
+  ["Maa ngi fi rekk", "Je vais bien, merci.", "I’m doing fine, thanks.", "Estoy bien, gracias."],
+  ["Jàmm rekk", "Tout va bien.", "All is well.", "Todo está bien."],
+  ["Naka sa waa kër", "Comment va ta famille ?", "How is your family?", "¿Cómo está tu familia?"],
+  ["Jërëjëf", "Merci.", "Thank you.", "Gracias."],
+  ["Waaw", "Oui.", "Yes.", "Sí."],
+  ["Déedéet", "Non.", "No.", "No."],
+  ["Ñaata la", "Combien ça coûte ?", "How much is it?", "¿Cuánto cuesta?"],
+  ["Dama xiif", "J’ai faim.", "I’m hungry.", "Tengo hambre."],
+  ["Dama bëgg ndox", "Je voudrais de l’eau.", "I would like some water.", "Quisiera agua."],
+  ["Maa ngi ñibbi", "Je rentre à la maison.", "I’m heading home.", "Me voy a casa."],
+  ["Ba ci kanam", "À bientôt.", "See you soon.", "Hasta pronto."],
+  ["Ba beneen yoon", "À la prochaine.", "See you next time.", "Hasta la próxima."],
+];
+
+function traduireDemo(texte) {
+  const n = " " + norm(texte) + " ", trouves = [];
+  DICO.forEach(([k, ...t]) => { const i = n.indexOf(" " + norm(k) + " "); if (i >= 0) trouves.push([i, t]); });
+  if (!trouves.length) {
+    const x = "(Mode démo : phrase absente du mini-dictionnaire. Lancez le serveur pour la vraie traduction.)";
+    return {fr: x, en: x, es: x};
+  }
+  trouves.sort((a, b) => a[0] - b[0]);
+  const lot = i => trouves.map(t => t[1][i]).join(" ");
+  return {fr: lot(0), en: lot(1), es: lot(2)};
+}
+
+const demoHist = [];
+let demoBC = null;
+
+function demoCanal() {
+  demoBC = new BroadcastChannel("wolofchat-" + S.salon);
+  demoBC.onmessage = e => { if (e.data.type === "msg") demoHist.push(e.data); rend(e.data); };
+  ws = {close() { demoBC.close(); }};
+  statut("Mode démo : ouvrez cette page dans un 2e onglet, même salon, pour simuler une conversation.");
+}
+
+async function demoApi(chemin, opts) {
+  const ok = d => ({ok: true, status: 200, json: async () => d});
+  if (chemin.startsWith("/api/historique")) return ok(demoHist);
+  if (chemin === "/api/vocal") {
+    const audio = opts.body.get("audio");
+    const t = prompt("MODE DÉMO : la transcription automatique du wolof nécessite le serveur.\nTapez ce que vous venez de dire en wolof (ex. : Nanga def ?) :");
+    if (!t || !t.trim()) return {ok: false, status: 400, json: async () => ({detail: "Message annulé."})};
+    const m = {type: "msg", id: Date.now() * 1000 + Math.floor(Math.random() * 1000), salon: S.salon,
+      auteur: S.nom, wolof: t.trim(), trad: traduireDemo(t), ts: Math.floor(Date.now() / 1000), audio};
+    demoHist.push(m); demoBC.postMessage(m);
+    return ok(m);
+  }
+  if (chemin === "/api/corriger") {
+    const c = JSON.parse(opts.body), ancien = msgs.get(c.id);
+    if (!ancien) return {ok: false, status: 404, json: async () => ({})};
+    const m = {...ancien, type: "maj", wolof: c.texte.trim(), trad: traduireDemo(c.texte)};
+    demoBC.postMessage(m);
+    return ok(m);
+  }
+  return {ok: false, status: 404, json: async () => ({})};
+}
+
+if (location.protocol.startsWith("http")) $("#serveur").value = location.origin;
+["README.txt", "main.py", "moteur.py", "evaluer.py", "requirements.txt"].forEach(nom => {
+  const li = h("li"), a = h("a", "", nom);
+  a.href = "#";
+  a.onclick = e => {
+    e.preventDefault();
+    const u = URL.createObjectURL(new Blob([document.getElementById("f-" + nom).textContent], {type: "text/plain"}));
+    const l = document.createElement("a");
+    l.href = u; l.download = nom; l.click();
+    setTimeout(() => URL.revokeObjectURL(u), 1000);
+  };
+  li.append(a); $("#dl").append(li);
+});
+</script>
+<script type="text/plain" id="f-README.txt">WOLOF CHAT : installation du serveur IA
+
+1. Placez dans un même dossier : main.py, moteur.py, evaluer.py, requirements.txt,
+   et la page HTML de l’application enregistrée sous le nom index.html.
+2. Installez Python 3.10 ou plus récent, et ffmpeg.
+3. Dans ce dossier : pip install -r requirements.txt
+4. Lancez le serveur (choisissez votre code d’accès) :
+   Linux / macOS : API_TOKEN="votre-code" uvicorn main:app --host 0.0.0.0 --port 8000
+   Windows (PowerShell) : $env:API_TOKEN="votre-code"; uvicorn main:app --port 8000
+5. Ouvrez http://localhost:8000 : l’adresse du serveur est préremplie.
+   Le premier démarrage télécharge plusieurs Go de modèles.
+6. Mesurez la qualité du wolof : python evaluer.py ./mes_enregistrements
+   (un dossier de paires audio + fichier .txt du même nom contenant le texte dit).
+
+Hors localhost, le micro exige HTTPS. Une carte graphique (GPU) accélère fortement les réponses.
+</script>
+<script type="text/plain" id="f-main.py">"""
+Wolof Chat : chat vocal wolof avec traduction en français, anglais et espagnol.
+Un seul serveur fournit le site web, l'API et le temps réel.
+
+Lancement :
+    API_TOKEN="votre-code-d-acces" uvicorn main:app --host 0.0.0.0 --port 8000
+Puis ouvrir http://localhost:8000 (le micro exige HTTPS hors localhost).
+"""
+
+import json
+import os
+import re
+import secrets
+import sqlite3
+import tempfile
+import time
+from collections import defaultdict
+from pathlib import Path
+
+from fastapi import (FastAPI, File, Form, Header, HTTPException, UploadFile,
+                     WebSocket, WebSocketDisconnect)
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
+
+import moteur
+
+CODE = os.environ.get("API_TOKEN", "")  # code d'accès partagé
+DATA = Path(os.environ.get("DATA_DIR", "data"))
+(DATA / "audio").mkdir(parents=True, exist_ok=True)
+MAX_OCTETS = 10 * 1024 * 1024
+FORMATS = {".webm", ".mp4", ".m4a", ".ogg", ".wav", ".mp3", ".aac"}
+
+db = sqlite3.connect(DATA / "chat.db", check_same_thread=False)
+db.executescript("""
+CREATE TABLE IF NOT EXISTS messages(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, salon TEXT, auteur TEXT,
+  wolof TEXT, trad TEXT, ts INTEGER);
+CREATE TABLE IF NOT EXISTS corrections(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, message_id INTEGER,
+  avant TEXT, apres TEXT, ts INTEGER);
+""")
+
+salles = defaultdict(set)
+app = FastAPI(title="Wolof Chat", version="1.0.0")
+
+
+def verifier(code: str):
+    if not CODE or not secrets.compare_digest(code or "", CODE):
+        raise HTTPException(401, "Code d’accès invalide.")
+
+
+def propre(texte: str, n: int = 30) -> str:
+    return re.sub(r"[^\w\- ]", "", texte or "").strip()[:n]
+
+
+def salon_id(salon: str) -> str:
+    return propre(salon).lower().replace(" ", "-")
+
+
+def en_message(l) -> dict:
+    return {"type": "msg", "id": l[0], "salon": l[1], "auteur": l[2],
+            "wolof": l[3], "trad": json.loads(l[4]), "ts": l[5]}
+
+
+async def diffuser(salon: str, charge: dict):
+    for ws in list(salles[salon]):
+        try:
+            await ws.send_json(charge)
+        except Exception:
+            salles[salon].discard(ws)
+
+
+@app.get("/")
+def accueil():
+    return FileResponse(Path(__file__).with_name("index.html"))
+
+
+@app.get("/api/sante")
+def sante():
+    return {"statut": "ok", "appareil": moteur.appareil}
+
+
+@app.get("/api/historique/{salon}")
+async def historique(salon: str, x_code: str = Header("")):
+    verifier(x_code)
+    lignes = db.execute(
+        "SELECT * FROM messages WHERE salon=? ORDER BY id DESC LIMIT 50",
+        (salon_id(salon),)).fetchall()
+    return [en_message(l) for l in reversed(lignes)]
+
+
+@app.post("/api/vocal")
+async def vocal(audio: UploadFile = File(...), salon: str = Form(...),
+                auteur: str = Form(...), consentement: bool = Form(False),
+                x_code: str = Header("")):
+    verifier(x_code)
+    ext = Path(audio.filename or "").suffix.lower()
+    if ext not in FORMATS:
+        raise HTTPException(400, "Format audio non pris en charge.")
+    contenu = await audio.read()
+    if len(contenu) > MAX_OCTETS:
+        raise HTTPException(413, "Fichier trop volumineux (10 Mo maximum).")
+
+    with tempfile.NamedTemporaryFile(suffix=ext) as f:
+        f.write(contenu)
+        f.flush()
+        try:
+            wolof = await run_in_threadpool(moteur.transcrire, f.name)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    if not wolof:
+        raise HTTPException(422, "Aucune parole reconnue, réessayez.")
+
+    trad = await run_in_threadpool(moteur.traduire, wolof)
+    salon, auteur, ts = salon_id(salon), propre(auteur), int(time.time())
+    with db:
+        cur = db.execute(
+            "INSERT INTO messages(salon,auteur,wolof,trad,ts) VALUES(?,?,?,?,?)",
+            (salon, auteur, wolof, json.dumps(trad), ts))
+    mid = cur.lastrowid
+    if consentement:  # audio conservé uniquement avec accord explicite
+        (DATA / "audio" / f"{mid}{ext}").write_bytes(contenu)
+
+    msg = {"type": "msg", "id": mid, "salon": salon, "auteur": auteur,
+           "wolof": wolof, "trad": trad, "ts": ts}
+    await diffuser(salon, msg)
+    return msg
+
+
+class Correction(BaseModel):
+    id: int
+    texte: str
+
+
+@app.post("/api/corriger")
+async def corriger(c: Correction, x_code: str = Header("")):
+    verifier(x_code)
+    texte = c.texte.strip()[:2000]
+    ligne = db.execute("SELECT * FROM messages WHERE id=?", (c.id,)).fetchone()
+    if not ligne or not texte:
+        raise HTTPException(404, "Message introuvable ou texte vide.")
+    trad = await run_in_threadpool(moteur.traduire, texte)
+    with db:
+        db.execute("UPDATE messages SET wolof=?, trad=? WHERE id=?",
+                   (texte, json.dumps(trad), c.id))
+        db.execute("INSERT INTO corrections(message_id,avant,apres,ts) VALUES(?,?,?,?)",
+                   (c.id, ligne[3], texte, int(time.time())))
+    msg = en_message(db.execute("SELECT * FROM messages WHERE id=?", (c.id,)).fetchone())
+    msg["type"] = "maj"
+    await diffuser(ligne[1], msg)
+    return msg
+
+
+@app.websocket("/ws/{salon}")
+async def ws_salon(ws: WebSocket, salon: str, code: str = ""):
+    if not CODE or not secrets.compare_digest(code, CODE):
+        await ws.close(code=4401)
+        return
+    await ws.accept()
+    salon = salon_id(salon)
+    salles[salon].add(ws)
+    try:
+        while True:
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        salles[salon].discard(ws)
+</script>
+<script type="text/plain" id="f-moteur.py">"""
+Moteur de transcription et de traduction wolof.
+
+- Transcription : MMS de Meta (adaptateur wolof "wol")
+- Traduction    : NLLB-200 de Meta (wolof -> français, anglais, espagnol)
+
+Les modèles se téléchargent au premier lancement (plusieurs Go).
+"""
+
+import librosa
+import torch
+from transformers import (
+    AutoModelForSeq2SeqLM,
+    AutoProcessor,
+    AutoTokenizer,
+    Wav2Vec2ForCTC,
+)
+
+MODELE_ASR = "facebook/mms-1b-all"
+MODELE_TRADUCTION = "facebook/nllb-200-distilled-600M"
+
+# Code court de l'application -> code de langue NLLB
+LANGUES_CIBLES = {"fr": "fra_Latn", "en": "eng_Latn", "es": "spa_Latn"}
+
+DUREE_MAX_SECONDES = 60
+
+appareil = "cuda" if torch.cuda.is_available() else "cpu"
+
+# --- Chargement unique des modèles au démarrage ---
+_processeur = AutoProcessor.from_pretrained(MODELE_ASR, target_lang="wol")
+_asr = (
+    Wav2Vec2ForCTC.from_pretrained(
+        MODELE_ASR, target_lang="wol", ignore_mismatched_sizes=True
+    )
+    .to(appareil)
+    .eval()
+)
+
+_tokenizer = AutoTokenizer.from_pretrained(MODELE_TRADUCTION, src_lang="wol_Latn")
+_traducteur = (
+    AutoModelForSeq2SeqLM.from_pretrained(MODELE_TRADUCTION).to(appareil).eval()
+)
+
+
+def transcrire(chemin_audio: str) -> str:
+    """Transcrit un fichier audio wolof en texte."""
+    audio, _ = librosa.load(chemin_audio, sr=16000, mono=True)
+    if len(audio) / 16000 > DUREE_MAX_SECONDES:
+        raise ValueError(f"Audio trop long (maximum {DUREE_MAX_SECONDES} s).")
+
+    entrees = _processeur(audio, sampling_rate=16000, return_tensors="pt")
+    entrees = {cle: val.to(appareil) for cle, val in entrees.items()}
+    with torch.no_grad():
+        logits = _asr(**entrees).logits
+    identifiants = torch.argmax(logits, dim=-1)[0]
+    return _processeur.decode(identifiants).strip()
+
+
+def traduire(texte_wolof: str) -> dict:
+    """Traduit un texte wolof vers le français, l'anglais et l'espagnol."""
+    if not texte_wolof.strip():
+        return {code: "" for code in LANGUES_CIBLES}
+
+    entrees = _tokenizer(texte_wolof, return_tensors="pt", truncation=True)
+    entrees = {cle: val.to(appareil) for cle, val in entrees.items()}
+
+    resultats = {}
+    for code, code_nllb in LANGUES_CIBLES.items():
+        with torch.no_grad():
+            sortie = _traducteur.generate(
+                **entrees,
+                forced_bos_token_id=_tokenizer.convert_tokens_to_ids(code_nllb),
+                max_new_tokens=256,
+                num_beams=4,
+            )
+        resultats[code] = _tokenizer.batch_decode(sortie, skip_special_tokens=True)[0]
+    return resultats
+</script>
+<script type="text/plain" id="f-evaluer.py">"""
+Mesure la qualité de la transcription wolof sur vos propres enregistrements.
+
+Préparez un dossier avec des paires de fichiers de même nom :
+    salutation1.m4a  +  salutation1.txt   (le texte exact dit, en wolof)
+    marche2.wav      +  marche2.txt
+
+Utilisation :
+    python evaluer.py ./mes_enregistrements
+
+Visez 30 à 50 enregistrements variés (hommes, femmes, âges, accents,
+bruit de fond). Plus le taux d'erreur (WER) est bas, mieux c'est :
+    < 20 %  : très bon        20-40 % : utilisable avec correction
+    > 40 %  : insuffisant, il faudra ajuster le modèle (fine-tuning)
+"""
+
+import re
+import sys
+from pathlib import Path
+
+import jiwer
+
+import moteur
+
+EXTENSIONS = {".wav", ".mp3", ".m4a", ".ogg", ".webm", ".aac", ".flac"}
+
+
+def normaliser(texte: str) -> str:
+    texte = texte.lower()
+    texte = re.sub(r"[^\w\s']", " ", texte)
+    return re.sub(r"\s+", " ", texte).strip()
+
+
+def main(dossier: Path) -> None:
+    lignes = []
+    for audio in sorted(dossier.iterdir()):
+        reference = audio.with_suffix(".txt")
+        if audio.suffix.lower() not in EXTENSIONS or not reference.exists():
+            continue
+
+        attendu = normaliser(reference.read_text(encoding="utf-8"))
+        obtenu = normaliser(moteur.transcrire(str(audio)))
+        wer = jiwer.wer(attendu, obtenu)
+        cer = jiwer.cer(attendu, obtenu)
+        lignes.append((audio.name, wer, cer, attendu, obtenu))
+        print(f"{audio.name:30} WER {wer:6.1%}  CER {cer:6.1%}")
+
+    if not lignes:
+        print("Aucune paire audio + .txt trouvée dans ce dossier.")
+        return
+
+    moyenne_wer = sum(l[1] for l in lignes) / len(lignes)
+    moyenne_cer = sum(l[2] for l in lignes) / len(lignes)
+    print(f"\n{len(lignes)} fichiers - WER moyen {moyenne_wer:.1%} - CER moyen {moyenne_cer:.1%}")
+
+    print("\nLes 5 pires cas :")
+    for nom, wer, _, attendu, obtenu in sorted(lignes, key=lambda l: -l[1])[:5]:
+        print(f"- {nom} ({wer:.0%})\n    attendu : {attendu}\n    obtenu  : {obtenu}")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.exit("Usage : python evaluer.py <dossier>")
+    main(Path(sys.argv[1]))
+</script>
+<script type="text/plain" id="f-requirements.txt">fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+torch>=2.2
+transformers>=4.40
+sentencepiece>=0.2
+librosa>=0.10
+jiwer>=3.0
+</script>
+</body>
+</html>
